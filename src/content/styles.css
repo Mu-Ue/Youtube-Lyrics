@@ -1,0 +1,170 @@
+.yl-panel {
+  --yl-bg: #ffffff;
+  --yl-fg: #0f0f0f;
+  --yl-muted: #606060;
+  --yl-surface: #f2f2f2;
+  --yl-surface-hover: #e5e5e5;
+  --yl-border: #cccccc;
+  --yl-link: #065fd4;
+  --yl-focus: #1c62b9;
+
+  box-sizing: border-box;
+  margin-top: 12px;
+  padding: 8px 12px 12px;
+  border-radius: 12px;
+  background: var(--yl-bg);
+  color: var(--yl-fg);
+  font-family: Roboto, Arial, sans-serif;
+}
+
+.yl-panel[data-theme="dark"] {
+  --yl-bg: #222222;
+  --yl-fg: #e7e7e7;
+  --yl-muted: #aaaaaa;
+  --yl-surface: #3a3a3a;
+  --yl-surface-hover: #4a4a4a;
+  --yl-border: #555555;
+  --yl-link: #3ea6ff;
+}
+
+.yl-panel *,
+.yl-panel *::before,
+.yl-panel *::after {
+  box-sizing: border-box;
+}
+
+.yl-panel [hidden],
+.yl-host[hidden] {
+  display: none !important;
+}
+
+.yl-host--sidebar {
+  max-height: 500px;
+  overflow-y: auto;
+}
+
+.yl-controls {
+  display: flex;
+  align-items: stretch;
+  margin: 8px 0 0;
+}
+
+.yl-input {
+  /* Compact by default; shrinks further if the container is narrower. */
+  flex: 0 1 280px;
+  min-width: 0;
+  padding: 0 16px;
+  border: 1px solid var(--yl-border);
+  border-radius: 40px 0 0 40px;
+  background: transparent;
+  color: inherit;
+  font:
+    400 14px/20px Roboto,
+    Arial,
+    sans-serif;
+}
+
+.yl-button:focus-visible,
+.yl-source:focus-visible {
+  outline: 2px solid var(--yl-link);
+  outline-offset: 1px;
+}
+
+/* Like YouTube: no outline, the existing 1px border just turns blue. */
+.yl-input:focus,
+.yl-input:focus-visible {
+  outline: none;
+  border-color: var(--yl-focus);
+}
+
+/* Keep the attached search button's border in sync so the whole bar is one blue outline. */
+.yl-controls:has(.yl-input:focus) .yl-button[type="submit"] {
+  border-color: var(--yl-focus);
+}
+
+.yl-controls .yl-button[type="submit"]:focus-visible {
+  outline-offset: -2px;
+}
+
+.yl-button {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 1px solid var(--yl-border);
+  border-radius: 10px;
+  background: var(--yl-surface);
+  color: var(--yl-muted);
+  cursor: pointer;
+}
+
+.yl-button:hover {
+  background: var(--yl-surface-hover);
+}
+
+.yl-button svg {
+  width: 20px;
+  height: 20px;
+  fill: currentColor;
+}
+
+.yl-controls .yl-button[type="submit"] {
+  border-left: none;
+  border-radius: 0 40px 40px 0;
+}
+
+.yl-controls .yl-button:last-child {
+  margin-left: 8px;
+}
+
+.yl-body {
+  margin-top: 8px;
+}
+
+.yl-spinner {
+  width: 32px;
+  height: 32px;
+  margin: 8px 0;
+  border: 4px solid var(--yl-surface-hover);
+  border-top-color: var(--yl-link);
+  border-radius: 50%;
+  animation: yl-spin 0.85s linear infinite;
+}
+
+.yl-source {
+  display: inline-block;
+  margin-bottom: 12px;
+  color: var(--yl-link);
+  font-size: 14px;
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.yl-source:hover {
+  text-decoration: underline;
+}
+
+.yl-status,
+.yl-lyrics {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+  tab-size: 4;
+  white-space: pre-wrap;
+}
+
+@keyframes yl-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .yl-spinner {
+    animation-duration: 3s;
+  }
+}

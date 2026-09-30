@@ -1,0 +1,18 @@
+# Dependencies and build output
+node_modules/
+extension/
+coverage/
+
+# Packaged releases
+*.zip
+
+# Logs and local environment
+*.log
+.env
+.env.*
+
+# OS and editor files
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
