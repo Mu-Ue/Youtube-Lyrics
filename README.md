@@ -24,49 +24,31 @@ as a temporary add-on.
 
 ## Scripts
 
-| Script              | Purpose                                            |
-| ------------------- | -------------------------------------------------- |
-| `npm run build`     | Production build into `extension/`                 |
-| `npm run dev`       | Rebuild on change (unminified, inline source maps) |
-| `npm run typecheck` | Type-check with `tsc`                              |
-| `npm run lint`      | Lint with ESLint                                   |
-| `npm run format`    | Format with Prettier                               |
-| `npm test`          | Run the unit tests with Vitest                     |
-| `npm run test:coverage` | Run the tests with a coverage report and thresholds |
-| `npm run test:live`     | Check each provider against the real website (needs network) |
-| `npm run check`     | Typecheck, lint, format check and tests            |
-| `npm run audit`     | Audit production dependencies for known issues     |
+| Script           | Purpose                                            |
+| ---------------- | -------------------------------------------------- |
+| `npm run build`  | Production build into `extension/`                 |
+| `npm run dev`    | Rebuild on change (unminified, inline source maps) |
+| `npm test`       | Run the unit tests                                 |
+| `npm run check`  | Typecheck, lint, format check and tests (CI)       |
+| `npm run format` | Format with Prettier                               |
 
-The extension version lives in `package.json`; the build copies it into the generated
-`manifest.json`, and fails if the manifest references a file that was not produced.
-CI (`.github/workflows/ci.yml`) runs `check`, `build` and `audit` on every push and pull request.
+The version lives in `package.json`; the build copies it into the generated `manifest.json`.
 
 ## Architecture
 
 ```
 src/
-├── background/        Service worker: performs allow-listed network requests
-│   ├── index.ts       Message entry point (sender and payload validation)
-│   ├── allow-list.ts  Single source of truth for permitted hosts
-│   └── fetcher.ts     Timeouts, size limits, redirect checks, typed errors
-├── content/           Runs on youtube.com
-│   ├── index.ts       Wires page, panel and providers together
-│   ├── panel.ts       Lyrics panel UI (plain DOM, no innerHTML, search landmark, accessible status region)
-│   ├── youtube.ts     YouTube-specific selectors and observers
-│   ├── title.ts       Video title → search query
-│   ├── storage.ts     Persistent panel settings
-│   └── styles.css
-├── providers/         One module per lyrics site, plus fallback and LRU cache
-└── shared/            Message types, messaging client, logger, type guards, utilities
-assets/icons/          Extension icons (copied into the build)
-tests/                 Unit tests, mirroring the layout of src/ (background, content, providers, shared)
+├── background/   Service worker: validates messages, fetches allow-listed HTTPS pages
+├── content/      Runs on youtube.com: panel UI, title parsing, YouTube DOM hooks, settings
+├── providers/    One module per lyrics site, plus fallback order and an LRU cache
+└── shared/       Message contract and small utilities
 ```
-
-Tests live in `tests/` and run in jsdom with the browser APIs mocked.
 
 Content scripts cannot make cross-origin requests, so they ask the background worker to
 download pages. The worker only answers well-formed messages from this extension's own
-youtube.com content script, and only fetches HTTPS URLs on an exact-match host allow-list.
+youtube.com content script, and only fetches HTTPS URLs on an exact-match host allow-list
+(checked again after redirects), with a timeout, a size limit and no cookies or referrer.
+Lyrics are only requested while the panel is open. The extension has no runtime dependencies.
 
 ## Permissions
 
@@ -75,12 +57,6 @@ youtube.com content script, and only fetches HTTPS URLs on an exact-match host a
 | `storage`                                                                                       | Remembers whether the panel is open and where it is placed |
 | `genius.com`, `letssingit.com`, `search.letssingit.com`, `songlyrics.com`, `www.songlyrics.com` | Lets the background worker download lyrics pages           |
 | Content script on `https://www.youtube.com/*`                                                   | Shows the panel on YouTube watch pages                     |
-
-## Browser compatibility
-
-Chrome and other Chromium browsers 121+, and Firefox 121+. Chrome 121 is the first version that
-accepts both `background.service_worker` and `background.scripts`, which is how one manifest
-serves both browsers.
 
 ## Disclaimer
 
