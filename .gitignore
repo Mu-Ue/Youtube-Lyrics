@@ -1,7 +1,6 @@
 # Dependencies and build output
 node_modules/
 extension/
-coverage/
 
 # Packaged releases
 *.zip
