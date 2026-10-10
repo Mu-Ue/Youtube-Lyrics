@@ -30,7 +30,7 @@
   ],
   "browser_specific_settings": {
     "gecko": {
-      "id": "youtrack.lyrics@example.com",
+      "id": "youtube-lyrics@firefox0",
       "strict_min_version": "121.0"
     }
   }
