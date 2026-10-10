@@ -27,6 +27,8 @@ const h = vi.hoisted(() => {
     saveSettings: vi.fn(),
     watchPage: true,
     onTitleChange: undefined as (() => void) | undefined,
+    chapter: "",
+    onChapterChange: undefined as (() => void) | undefined,
     onMountPoints: undefined as ((points: unknown) => void) | undefined,
     onNavigate: undefined as (() => void) | undefined,
   };
@@ -63,6 +65,10 @@ vi.mock("../../src/content/youtube", () => ({
   isDarkTheme: () => false,
   observeTitle: (callback: () => void) => {
     h.onTitleChange = callback;
+  },
+  getChapterTitle: () => h.chapter,
+  observeChapter: (callback: () => void) => {
+    h.onChapterChange = callback;
   },
   observeTheme: () => undefined,
   onNavigation: (callback: () => void) => {
@@ -124,6 +130,8 @@ beforeEach(() => {
   vi.clearAllMocks();
   h.handlers = undefined;
   h.onTitleChange = undefined;
+  h.chapter = "";
+  h.onChapterChange = undefined;
   h.onMountPoints = undefined;
   h.onNavigate = undefined;
   h.watchPage = true;
@@ -214,6 +222,44 @@ describe("automatic lookups", () => {
 
     expect(h.panel.showMessage).toHaveBeenCalledExactlyOnceWith(NOT_FOUND);
     expect(h.panel.showResult).not.toHaveBeenCalled();
+  });
+});
+
+describe("chapters", () => {
+  it("prefers the current chapter over the video title", async () => {
+    setVideoTitle("Best of Michael Jackson Mix - YouTube");
+    h.chapter = "Michael Jackson - Billie Jean";
+    await boot();
+    await mountPanel();
+
+    expect(h.findLyrics).toHaveBeenCalledExactlyOnceWith(
+      "michael jackson billie jean",
+      expect.anything(),
+    );
+  });
+
+  it("looks up the next song when the chapter changes", async () => {
+    h.chapter = "Michael Jackson - Billie Jean";
+    await boot();
+    await mountPanel();
+
+    h.chapter = "Michael Jackson - Thriller";
+    h.onChapterChange?.();
+    await vi.advanceTimersByTimeAsync(300);
+
+    expect(h.findLyrics).toHaveBeenCalledTimes(2);
+    expect(h.findLyrics).toHaveBeenLastCalledWith("michael jackson thriller", expect.anything());
+  });
+
+  it("falls back to the video title when there are no chapters", async () => {
+    await boot();
+    await mountPanel();
+
+    expect(h.onChapterChange).toBeDefined();
+    expect(h.findLyrics).toHaveBeenCalledExactlyOnceWith(
+      "michael jackson billie jean",
+      expect.anything(),
+    );
   });
 });
 

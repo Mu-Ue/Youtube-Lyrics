@@ -10,6 +10,9 @@ export type Disposer = () => void;
 
 const DESCRIPTION_SELECTOR = ".style-scope.ytd-text-inline-expander";
 const SECONDARY_SELECTOR = "div#secondary.style-scope.ytd-watch-flexy";
+const CHAPTER_SELECTOR = ".ytp-chapter-title-content";
+
+let observedChapter: Element | null = null;
 
 export const isWatchPage = (): boolean => window.location.pathname === "/watch";
 
@@ -27,6 +30,27 @@ export function observeTitle(callback: () => void): void {
   if (!titleElement) return;
 
   new MutationObserver(callback).observe(titleElement, {
+    childList: true,
+    characterData: true,
+    subtree: true,
+  });
+}
+
+/** The current chapter name, or `""` when the video has no chapters. */
+export const getChapterTitle = (): string =>
+  document.querySelector(CHAPTER_SELECTOR)?.textContent?.trim() ?? "";
+
+/**
+ * Calls `callback` whenever the player's current chapter changes, e.g. when
+ * the next song of a mix starts. The player outlives in-app navigations, so
+ * the element is observed only once.
+ */
+export function observeChapter(callback: () => void): void {
+  const chapterElement = document.querySelector(CHAPTER_SELECTOR);
+  if (!chapterElement || chapterElement === observedChapter) return;
+  observedChapter = chapterElement;
+
+  new MutationObserver(callback).observe(chapterElement, {
     childList: true,
     characterData: true,
     subtree: true,

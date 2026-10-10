@@ -2,6 +2,9 @@
  * Content script entry point. Wires the YouTube page, the lyrics panel and
  * the providers together.
  *
+ * In videos with chapters (e.g. mixes), lyrics follow the current chapter, so
+ * they update automatically when the next song starts.
+ *
  * Lyrics are only requested while the panel is open, so browsing YouTube with
  * the panel collapsed causes no network traffic to lyrics sites.
  */
@@ -52,7 +55,10 @@ async function lookup(manualQuery = ""): Promise<void> {
   // The title also changes on the home page, search results, etc.
   if (isAutomatic && !YouTube.isWatchPage()) return;
 
-  const query = isAutomatic ? filterTitle(getVideoTitle(document.title)) : manualQuery;
+  // In a mix, the current chapter names the song that is playing.
+  const query = isAutomatic
+    ? filterTitle(YouTube.getChapterTitle() || getVideoTitle(document.title))
+    : manualQuery;
 
   if (!query) {
     if (!isAutomatic || settings.open) panel.showMessage(NO_TITLE_MESSAGE);
@@ -84,6 +90,8 @@ async function main(): Promise<void> {
   panel.setDark(YouTube.isDarkTheme());
 
   let stopWaiting: YouTube.Disposer = () => undefined;
+  // Shared so a navigation's title and chapter changes collapse into one lookup.
+  const scheduleLookup = debounce(() => void lookup(), LOOKUP_DEBOUNCE_MS);
 
   const ensureMounted = (): void => {
     if (!YouTube.isWatchPage() || panel.isMounted) return;
@@ -91,13 +99,14 @@ async function main(): Promise<void> {
     stopWaiting();
     stopWaiting = YouTube.waitForMountPoints(({ description, secondary }) => {
       panel.mount(description, secondary);
+      YouTube.observeChapter(scheduleLookup);
       void lookup();
     });
   };
 
   // These live as long as the page. There is deliberately no teardown on
   // `pagehide`: it would leave the extension dead after a back/forward-cache restore.
-  YouTube.observeTitle(debounce(() => void lookup(), LOOKUP_DEBOUNCE_MS));
+  YouTube.observeTitle(scheduleLookup);
   YouTube.observeTheme((dark) => panel.setDark(dark));
   YouTube.onNavigation(ensureMounted);
 
