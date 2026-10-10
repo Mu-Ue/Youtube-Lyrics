@@ -5,7 +5,7 @@
   "type": "module",
   "repository": {
     "type": "git",
-    "url": "https://github.com/Firefox0/Youtube-Lyrics.git"
+    "url": "https://github.com/Mu-Ue/Youtube-Lyrics.git"
   },
   "engines": {
     "node": ">=20.19"
