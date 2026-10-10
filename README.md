@@ -1,6 +1,12 @@
+<p align="center">
+  <img src="assets/icons/icon-128.png" alt="YouTube Lyrics icon" width="128">
+</p>
+
 # YouTube Lyrics
 
 A browser extension that shows song lyrics next to the YouTube video you are watching.
+
+![The lyrics panel next to a YouTube video](assets/screenshot.png)
 
 - Looks lyrics up on Genius, LetsSingIt and SongLyrics (in that order)
 - Collapsible panel that can sit in the sidebar or below the description, with light and dark themes
