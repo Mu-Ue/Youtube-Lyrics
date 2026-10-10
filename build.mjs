@@ -22,7 +22,6 @@ await writeFile(
   `${OUT_DIR}/manifest.json`,
   `${JSON.stringify({ ...manifest, version: pkg.version }, null, 2)}\n`,
 );
-await cp("src/content/styles.css", `${OUT_DIR}/content.css`);
 await cp("assets/icons", `${OUT_DIR}/icons`, { recursive: true });
 
 /** Every file the manifest points at, relative to the output directory. */
@@ -40,10 +39,12 @@ function referencedFiles(source) {
 
 /** @type {import("esbuild").BuildOptions} */
 const options = {
-  entryPoints: {
-    background: "src/background/index.ts",
-    content: "src/content/index.ts",
-  },
+  // The stylesheet is an entry point too, so watch mode rebuilds it on change.
+  entryPoints: [
+    { in: "src/background/index.ts", out: "background" },
+    { in: "src/content/index.ts", out: "content" },
+    { in: "src/content/styles.css", out: "content" },
+  ],
   outdir: OUT_DIR,
   bundle: true,
   // Content scripts are classic scripts, so ES modules cannot be used.
