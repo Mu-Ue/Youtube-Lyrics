@@ -1,6 +1,5 @@
 {
   "name": "youtube-lyrics",
-  "version": "1.0.4",
   "private": true,
   "description": "Browser extension that shows song lyrics next to YouTube videos.",
   "type": "module",

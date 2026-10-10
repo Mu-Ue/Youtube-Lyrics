@@ -12,27 +12,25 @@ Requires Node.js 20.19 or newer.
 
 ```bash
 npm install
-npm run build      # production build into extension/  (Windows: build.bat)
+npm run build      # production build into dist/  (Windows: build.bat)
 npm run dev        # rebuild on change
 ```
 
 Load the extension in Chrome (121+): open `chrome://extensions`, enable **Developer mode**,
-choose **Load unpacked** and select the `extension/` folder.
+choose **Load unpacked** and select the repository folder.
 
-In Firefox (121+), open `about:debugging`, choose **This Firefox** and load `extension/manifest.json`
+In Firefox (121+), open `about:debugging`, choose **This Firefox** and load `manifest.json`
 as a temporary add-on.
 
 ## Scripts
 
 | Script           | Purpose                                            |
 | ---------------- | -------------------------------------------------- |
-| `npm run build`  | Production build into `extension/`                 |
+| `npm run build`  | Production build into `dist/`                      |
 | `npm run dev`    | Rebuild on change (unminified, inline source maps) |
 | `npm test`       | Run the unit tests                                 |
 | `npm run check`  | Typecheck, lint, format check and tests (CI)       |
 | `npm run format` | Format with Prettier                               |
-
-The version lives in `package.json`; the build copies it into the generated `manifest.json`.
 
 ## Architecture
 

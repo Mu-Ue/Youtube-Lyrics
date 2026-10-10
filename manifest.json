@@ -1,11 +1,12 @@
 {
   "manifest_version": 3,
   "name": "YouTube Lyrics",
+  "version": "1.0.4",
   "description": "Shows song lyrics next to the YouTube video you are watching.",
   "icons": {
-    "16": "icons/icon-16.png",
-    "48": "icons/icon-48.png",
-    "128": "icons/icon-128.png"
+    "16": "assets/icons/icon-16.png",
+    "48": "assets/icons/icon-48.png",
+    "128": "assets/icons/icon-128.png"
   },
   "minimum_chrome_version": "121",
   "permissions": ["storage"],
@@ -17,14 +18,14 @@
     "https://www.songlyrics.com/*"
   ],
   "background": {
-    "service_worker": "background.js",
-    "scripts": ["background.js"]
+    "service_worker": "dist/background.js",
+    "scripts": ["dist/background.js"]
   },
   "content_scripts": [
     {
       "matches": ["https://www.youtube.com/*"],
-      "js": ["content.js"],
-      "css": ["content.css"],
+      "js": ["dist/content.js"],
+      "css": ["dist/content.css"],
       "run_at": "document_idle"
     }
   ],
