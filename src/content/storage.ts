@@ -3,10 +3,7 @@
  * `localStorage`, this is isolated from scripts running on youtube.com.
  */
 
-import browser from "webextension-polyfill";
-
-import { isRecord } from "../shared/guards";
-import { logger } from "../shared/logger";
+import { isRecord, logger } from "../shared/util";
 
 export interface PanelSettings {
   /** Whether the lyrics panel is expanded. */
@@ -22,7 +19,7 @@ const STORAGE_KEY = "panelSettings";
 /** Loads settings, falling back to defaults for missing or malformed data. */
 export async function loadSettings(): Promise<PanelSettings> {
   try {
-    const stored = await browser.storage.local.get(STORAGE_KEY);
+    const stored = await chrome.storage.local.get(STORAGE_KEY);
     const value: unknown = stored[STORAGE_KEY];
     if (!isRecord(value)) return DEFAULT_SETTINGS;
 
@@ -37,7 +34,7 @@ export async function loadSettings(): Promise<PanelSettings> {
 
 export async function saveSettings(settings: PanelSettings): Promise<void> {
   try {
-    await browser.storage.local.set({ [STORAGE_KEY]: settings });
+    await chrome.storage.local.set({ [STORAGE_KEY]: settings });
   } catch (error) {
     logger.warn("Could not save settings", error);
   }

@@ -1,6 +1,38 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { fetchResource } from "../../src/background/fetcher";
+import manifest from "../../manifest.json";
+import { ALLOWED_HOSTS, fetchResource, isAllowed } from "../../src/background/fetch";
+
+describe("isAllowed", () => {
+  it.each([...ALLOWED_HOSTS])("accepts https://%s", (host) => {
+    expect(isAllowed(`https://${host}/some/path?q=1`)).toBe(true);
+  });
+
+  it.each([
+    ["an unlisted host", "https://google.com/search"],
+    ["a subdomain that is not listed", "https://evil.genius.com/"],
+    ["a look-alike host", "https://genius.com.evil.example/"],
+    ["a trailing-dot host", "https://genius.com./"],
+    ["plain http", "http://genius.com/"],
+    ["embedded credentials", "https://user:pass@genius.com/"],
+    ["a custom port", "https://genius.com:8443/"],
+    ["a non-http scheme", "javascript:alert(1)"],
+    ["a malformed URL", "not-a-valid-url"],
+    ["an empty string", ""],
+  ])("rejects %s", (_description, url) => {
+    expect(isAllowed(url)).toBe(false);
+  });
+
+  it("is case-insensitive about the hostname", () => {
+    expect(isAllowed("https://GENIUS.com/")).toBe(true);
+  });
+
+  it("matches the manifest's host permissions exactly", () => {
+    const hosts = manifest.host_permissions.map((pattern) => new URL(pattern).hostname);
+
+    expect(hosts.sort()).toEqual([...ALLOWED_HOSTS].sort());
+  });
+});
 
 const URL_OK = "https://genius.com/song";
 

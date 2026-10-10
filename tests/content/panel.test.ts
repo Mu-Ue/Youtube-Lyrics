@@ -102,13 +102,20 @@ describe("LyricsPanel", () => {
     expect(root.parentElement?.classList.contains("yl-host--sidebar")).toBe(false);
   });
 
-  it("reports mounted state and unmounts cleanly", () => {
+  it("reports unmounted once YouTube removes its hosts", () => {
     const panel = mountPanel();
     expect(panel.isMounted).toBe(true);
 
-    panel.destroy();
+    document.body.replaceChildren();
     expect(panel.isMounted).toBe(false);
-    expect(document.querySelector(".yl-panel")).toBeNull();
+  });
+
+  it("remounts without leaving stale hosts behind", () => {
+    const panel = mountPanel();
+    panel.mount(document.body, document.body);
+
+    expect(document.querySelectorAll(".yl-host")).toHaveLength(2);
+    expect(document.querySelectorAll(".yl-panel")).toHaveLength(1);
   });
 
   it("forwards clicks and trimmed searches to the handlers", () => {

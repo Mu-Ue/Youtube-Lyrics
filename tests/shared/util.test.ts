@@ -1,6 +1,16 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { debounce } from "../../src/shared/debounce";
+import { debounce, isRecord, logger } from "../../src/shared/util";
+
+describe("isRecord", () => {
+  it.each([{}, { a: 1 }, []])("accepts %j", (value) => {
+    expect(isRecord(value)).toBe(true);
+  });
+
+  it.each([null, undefined, "text", 42, true])("rejects %j", (value) => {
+    expect(isRecord(value)).toBe(false);
+  });
+});
 
 describe("debounce", () => {
   beforeEach(() => {
@@ -33,8 +43,7 @@ describe("debounce", () => {
     debounced("c");
     vi.advanceTimersByTime(300);
 
-    expect(fn).toHaveBeenCalledTimes(1);
-    expect(fn).toHaveBeenCalledWith("c");
+    expect(fn).toHaveBeenCalledExactlyOnceWith("c");
   });
 
   it("fires again for calls made after the previous one ran", () => {
@@ -47,5 +56,28 @@ describe("debounce", () => {
     vi.advanceTimersByTime(100);
 
     expect(fn).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe("logger", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("prefixes warnings and passes the error along", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const cause = new Error("boom");
+
+    logger.warn("Something failed", cause);
+
+    expect(warn).toHaveBeenCalledWith("[YouTube Lyrics] Something failed", cause);
+  });
+
+  it("omits the error argument when there is none", () => {
+    const error = vi.spyOn(console, "error").mockImplementation(() => undefined);
+
+    logger.error("Fatal");
+
+    expect(error).toHaveBeenCalledWith("[YouTube Lyrics] Fatal");
   });
 });

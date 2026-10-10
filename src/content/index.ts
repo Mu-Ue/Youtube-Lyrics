@@ -7,8 +7,7 @@
  */
 
 import { findLyrics } from "../providers";
-import { debounce } from "../shared/debounce";
-import { logger } from "../shared/logger";
+import { debounce, logger } from "../shared/util";
 import { LyricsPanel } from "./panel";
 import { DEFAULT_SETTINGS, loadSettings, saveSettings, type PanelSettings } from "./storage";
 import { filterTitle, getVideoTitle } from "./title";
@@ -20,19 +19,22 @@ const NOT_FOUND_MESSAGE = "No lyrics found for this video. Try searching manuall
 
 let settings: PanelSettings = DEFAULT_SETTINGS;
 let lastAutoQuery = "";
-let generation = 0; // incremented per lookup so stale responses are discarded
+let pending: AbortController | undefined; // the lookup that currently owns the panel
+
+function updateSettings(change: Partial<PanelSettings>): void {
+  settings = { ...settings, ...change };
+  void saveSettings(settings);
+}
 
 const panel = new LyricsPanel({
   onToggle: () => {
-    settings = { ...settings, open: !settings.open };
+    updateSettings({ open: !settings.open });
     panel.setOpen(settings.open);
-    void saveSettings(settings);
     void lookup();
   },
   onMove: () => {
-    settings = { ...settings, insideDescription: !settings.insideDescription };
+    updateSettings({ insideDescription: !settings.insideDescription });
     panel.setPlacement(settings.insideDescription, true);
-    void saveSettings(settings);
   },
   onSearch: (query) => {
     if (!query) lastAutoQuery = ""; // an empty search re-runs the automatic lookup
@@ -62,11 +64,14 @@ async function lookup(manualQuery = ""): Promise<void> {
     lastAutoQuery = query;
   }
 
-  const current = ++generation;
+  // Superseding the previous lookup stops it from querying further providers
+  // and keeps its late result from overwriting this one.
+  pending?.abort();
+  const { signal } = (pending = new AbortController());
   panel.showLoading();
 
-  const result = await findLyrics(query);
-  if (current !== generation) return; // a newer lookup owns the panel now
+  const result = await findLyrics(query, { signal });
+  if (signal.aborted) return;
 
   if (result) panel.showResult(result);
   else panel.showMessage(NOT_FOUND_MESSAGE);
@@ -78,7 +83,6 @@ async function main(): Promise<void> {
   panel.setPlacement(settings.insideDescription);
   panel.setDark(YouTube.isDarkTheme());
 
-  const debouncedLookup = debounce(() => void lookup(), LOOKUP_DEBOUNCE_MS);
   let stopWaiting: YouTube.Disposer = () => undefined;
 
   const ensureMounted = (): void => {
@@ -91,17 +95,11 @@ async function main(): Promise<void> {
     });
   };
 
-  const disposers: YouTube.Disposer[] = [
-    YouTube.observeTitle(debouncedLookup),
-    YouTube.observeTheme((dark) => panel.setDark(dark)),
-    YouTube.onNavigation(ensureMounted),
-  ];
-
-  window.addEventListener("pagehide", () => {
-    stopWaiting();
-    for (const dispose of disposers) dispose();
-    panel.destroy();
-  });
+  // These live as long as the page. There is deliberately no teardown on
+  // `pagehide`: it would leave the extension dead after a back/forward-cache restore.
+  YouTube.observeTitle(debounce(() => void lookup(), LOOKUP_DEBOUNCE_MS));
+  YouTube.observeTheme((dark) => panel.setDark(dark));
+  YouTube.onNavigation(ensureMounted);
 
   ensureMounted();
 }

@@ -1,6 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
-
-vi.mock("webextension-polyfill", () => ({ default: { runtime: { sendMessage: vi.fn() } } }));
+import { describe, expect, it } from "vitest";
 
 import { buildUrl, elementToText, resolveUrl } from "../../src/providers/html";
 

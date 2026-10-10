@@ -1,6 +1,6 @@
-import { afterEach, beforeEach, describe, expect, it, vi, type MockInstance } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { LyricsResult } from "../../src/shared/types";
+import type { LyricsResult } from "../../src/providers";
 
 /** Everything the mocked collaborators expose to the test. */
 const h = vi.hoisted(() => {
@@ -15,7 +15,6 @@ const h = vi.hoisted(() => {
     panel: {
       isMounted: false,
       mount: vi.fn(),
-      destroy: vi.fn(),
       setOpen: vi.fn(),
       setPlacement: vi.fn(),
       setDark: vi.fn(),
@@ -23,14 +22,13 @@ const h = vi.hoisted(() => {
       showResult: vi.fn(),
       showMessage: vi.fn(),
     },
-    findLyrics: vi.fn<(query: string) => Promise<unknown>>(),
+    findLyrics: vi.fn<(query: string, options: { signal: AbortSignal }) => Promise<unknown>>(),
     loadSettings: vi.fn<() => Promise<{ open: boolean; insideDescription: boolean }>>(),
     saveSettings: vi.fn(),
     watchPage: true,
     onTitleChange: undefined as (() => void) | undefined,
     onMountPoints: undefined as ((points: unknown) => void) | undefined,
     onNavigate: undefined as (() => void) | undefined,
-    disposers: [] as ReturnType<typeof vi.fn>[],
   };
 });
 
@@ -51,7 +49,6 @@ vi.mock("../../src/content/panel", () => ({
       return h.panel.isMounted;
     }
     mount = h.panel.mount;
-    destroy = h.panel.destroy;
     setOpen = h.panel.setOpen;
     setPlacement = h.panel.setPlacement;
     setDark = h.panel.setDark;
@@ -61,31 +58,21 @@ vi.mock("../../src/content/panel", () => ({
   },
 }));
 
-vi.mock("../../src/content/youtube", () => {
-  const disposer = (): ReturnType<typeof vi.fn> => {
-    const dispose = vi.fn();
-    h.disposers.push(dispose);
-    return dispose;
-  };
-
-  return {
-    isWatchPage: () => h.watchPage,
-    isDarkTheme: () => false,
-    observeTitle: (callback: () => void) => {
-      h.onTitleChange = callback;
-      return disposer();
-    },
-    observeTheme: () => disposer(),
-    onNavigation: (callback: () => void) => {
-      h.onNavigate = callback;
-      return disposer();
-    },
-    waitForMountPoints: (callback: (points: unknown) => void) => {
-      h.onMountPoints = callback;
-      return disposer();
-    },
-  };
-});
+vi.mock("../../src/content/youtube", () => ({
+  isWatchPage: () => h.watchPage,
+  isDarkTheme: () => false,
+  observeTitle: (callback: () => void) => {
+    h.onTitleChange = callback;
+  },
+  observeTheme: () => undefined,
+  onNavigation: (callback: () => void) => {
+    h.onNavigate = callback;
+  },
+  waitForMountPoints: (callback: (points: unknown) => void) => {
+    h.onMountPoints = callback;
+    return vi.fn();
+  },
+}));
 
 const NO_TITLE = "Could not determine the song title. Try the search field.";
 const NOT_FOUND = "No lyrics found for this video. Try searching manually.";
@@ -110,7 +97,9 @@ function deferred<T>(): { promise: Promise<T>; resolve: (value: T) => void } {
   return { promise, resolve };
 }
 
-const flush = (): Promise<void> => vi.advanceTimersByTimeAsync(0);
+const flush = async (): Promise<void> => {
+  await vi.advanceTimersByTimeAsync(0);
+};
 
 /** Loads the content script fresh and lets `main()` finish. */
 async function boot(settings = { open: true, insideDescription: false }): Promise<void> {
@@ -129,18 +118,14 @@ function setVideoTitle(title: string): void {
   document.title = title;
 }
 
-let addListener: MockInstance<typeof window.addEventListener>;
-
 beforeEach(() => {
   vi.useFakeTimers();
   vi.resetModules();
   vi.clearAllMocks();
-  addListener = vi.spyOn(window, "addEventListener");
   h.handlers = undefined;
   h.onTitleChange = undefined;
   h.onMountPoints = undefined;
   h.onNavigate = undefined;
-  h.disposers.length = 0;
   h.watchPage = true;
   h.panel.isMounted = false;
   h.findLyrics.mockReset();
@@ -150,11 +135,6 @@ beforeEach(() => {
 });
 
 afterEach(() => {
-  // Each boot registers a fresh `pagehide` listener on the shared window.
-  for (const [type, listener] of addListener.mock.calls) {
-    if (type === "pagehide") window.removeEventListener(type, listener as EventListener);
-  }
-  addListener.mockRestore();
   vi.useRealTimers();
 });
 
@@ -163,7 +143,10 @@ describe("automatic lookups", () => {
     await boot();
     await mountPanel();
 
-    expect(h.findLyrics).toHaveBeenCalledExactlyOnceWith("michael jackson billie jean");
+    expect(h.findLyrics).toHaveBeenCalledExactlyOnceWith(
+      "michael jackson billie jean",
+      expect.anything(),
+    );
     expect(h.panel.showLoading).toHaveBeenCalledTimes(1);
     expect(h.panel.showResult).toHaveBeenCalledExactlyOnceWith(billieJean);
   });
@@ -203,7 +186,7 @@ describe("automatic lookups", () => {
     h.onTitleChange?.();
     await vi.advanceTimersByTimeAsync(300);
 
-    expect(h.findLyrics).toHaveBeenLastCalledWith("michael jackson thriller");
+    expect(h.findLyrics).toHaveBeenLastCalledWith("michael jackson thriller", expect.anything());
     expect(h.findLyrics).toHaveBeenCalledTimes(2);
   });
 
@@ -251,7 +234,10 @@ describe("debounce", () => {
     expect(h.findLyrics).not.toHaveBeenCalled();
 
     await vi.advanceTimersByTimeAsync(1);
-    expect(h.findLyrics).toHaveBeenCalledExactlyOnceWith("michael jackson thriller");
+    expect(h.findLyrics).toHaveBeenCalledExactlyOnceWith(
+      "michael jackson thriller",
+      expect.anything(),
+    );
   });
 });
 
@@ -266,7 +252,7 @@ describe("manual searches", () => {
     await flush();
 
     expect(h.findLyrics).toHaveBeenCalledTimes(2);
-    expect(h.findLyrics).toHaveBeenCalledWith("michael jackson thriller");
+    expect(h.findLyrics).toHaveBeenCalledWith("michael jackson thriller", expect.anything());
   });
 
   it("work off the watch page", async () => {
@@ -276,7 +262,10 @@ describe("manual searches", () => {
     h.handlers?.onSearch("michael jackson beat it");
     await flush();
 
-    expect(h.findLyrics).toHaveBeenCalledExactlyOnceWith("michael jackson beat it");
+    expect(h.findLyrics).toHaveBeenCalledExactlyOnceWith(
+      "michael jackson beat it",
+      expect.anything(),
+    );
   });
 
   it("an empty search re-runs the automatic lookup even for the same title", async () => {
@@ -288,7 +277,7 @@ describe("manual searches", () => {
     await flush();
 
     expect(h.findLyrics).toHaveBeenCalledTimes(2);
-    expect(h.findLyrics).toHaveBeenLastCalledWith("michael jackson billie jean");
+    expect(h.findLyrics).toHaveBeenLastCalledWith("michael jackson billie jean", expect.anything());
   });
 
   it("do not reset the automatic query, so the same title stays skipped", async () => {
@@ -338,6 +327,18 @@ describe("stale lookups", () => {
     expect(h.panel.showMessage).not.toHaveBeenCalled();
     expect(h.panel.showResult).toHaveBeenCalledExactlyOnceWith(thriller);
   });
+
+  it("aborts the overtaken lookup so it stops querying providers", async () => {
+    await boot();
+    h.findLyrics.mockReturnValue(new Promise(() => undefined));
+
+    h.handlers?.onSearch("first");
+    h.handlers?.onSearch("second");
+
+    const [first, second] = h.findLyrics.mock.calls.map(([, options]) => options.signal);
+    expect(first?.aborted).toBe(true);
+    expect(second?.aborted).toBe(false);
+  });
 });
 
 describe("panel controls", () => {
@@ -351,7 +352,10 @@ describe("panel controls", () => {
 
     expect(h.panel.setOpen).toHaveBeenLastCalledWith(true);
     expect(h.saveSettings).toHaveBeenCalledWith({ open: true, insideDescription: false });
-    expect(h.findLyrics).toHaveBeenCalledExactlyOnceWith("michael jackson billie jean");
+    expect(h.findLyrics).toHaveBeenCalledExactlyOnceWith(
+      "michael jackson billie jean",
+      expect.anything(),
+    );
   });
 
   it("moving flips and persists the placement", async () => {
@@ -382,12 +386,15 @@ describe("lifecycle", () => {
     expect(h.onMountPoints).toBeUndefined();
   });
 
-  it("tears everything down on pagehide", async () => {
+  it("keeps working after a back/forward-cache round trip", async () => {
     await boot();
+    await mountPanel();
+    window.dispatchEvent(new PageTransitionEvent("pagehide", { persisted: true }));
 
-    window.dispatchEvent(new Event("pagehide"));
+    setVideoTitle("Michael Jackson - Thriller (Official Video) - YouTube");
+    h.onTitleChange?.();
+    await vi.advanceTimersByTimeAsync(300);
 
-    expect(h.panel.destroy).toHaveBeenCalledTimes(1);
-    for (const dispose of h.disposers) expect(dispose).toHaveBeenCalled();
+    expect(h.findLyrics).toHaveBeenLastCalledWith("michael jackson thriller", expect.anything());
   });
 });

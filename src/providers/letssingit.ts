@@ -1,6 +1,5 @@
-import type { LyricsResult } from "../shared/types";
 import { buildUrl, elementToText, fetchDocument, resolveUrl } from "./html";
-import type { LyricsProvider } from "./provider";
+import type { LyricsProvider, LyricsResult } from "./provider";
 
 const SEARCH_URL = "https://search.letssingit.com/";
 const NO_LYRICS_PREFIX = "Unfortunately we don't have the lyrics";

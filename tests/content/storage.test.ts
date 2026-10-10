@@ -2,19 +2,17 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const store = vi.hoisted(() => ({}) as Record<string, unknown>);
 
-vi.mock("webextension-polyfill", () => ({
-  default: {
-    storage: {
-      local: {
-        get: vi.fn((key: string) => Promise.resolve(key in store ? { [key]: store[key] } : {})),
-        set: vi.fn((items: Record<string, unknown>) => {
-          Object.assign(store, items);
-          return Promise.resolve();
-        }),
-      },
+vi.stubGlobal("chrome", {
+  storage: {
+    local: {
+      get: vi.fn((key: string) => Promise.resolve(key in store ? { [key]: store[key] } : {})),
+      set: vi.fn((items: Record<string, unknown>) => {
+        Object.assign(store, items);
+        return Promise.resolve();
+      }),
     },
   },
-}));
+});
 
 import { DEFAULT_SETTINGS, loadSettings, saveSettings } from "../../src/content/storage";
 

@@ -1,27 +1,49 @@
 /**
- * Content-side client for the background fetch service.
+ * The message contract between the content script and the background worker,
+ * plus the content-side client.
  *
  * Content scripts cannot make cross-origin requests, so page downloads are
- * delegated to the background worker. Failures are reduced to `null` here
- * because callers only need to know whether a document was obtained.
+ * delegated to the background worker. Messages cross a trust boundary, so
+ * both directions are validated at runtime instead of trusting static types.
  */
 
-import browser from "webextension-polyfill";
+import { isRecord } from "./util";
 
-import { isRecord } from "./guards";
-import type { FetchKind, FetchRequest, FetchResponse } from "./types";
+/** How the background worker should interpret the response body. */
+export type FetchKind = "json" | "text";
+
+export interface FetchRequest {
+  readonly type: "fetch";
+  readonly kind: FetchKind;
+  readonly url: string;
+}
+
+export type FetchErrorCode =
+  "bad-request" | "forbidden" | "network" | "timeout" | "invalid-response";
+
+export type FetchResponse =
+  | { readonly ok: true; readonly data: unknown }
+  | { readonly ok: false; readonly error: FetchErrorCode };
+
+export function isFetchRequest(value: unknown): value is FetchRequest {
+  return (
+    isRecord(value) &&
+    value["type"] === "fetch" &&
+    (value["kind"] === "json" || value["kind"] === "text") &&
+    typeof value["url"] === "string"
+  );
+}
 
 function isFetchResponse(value: unknown): value is FetchResponse {
   if (!isRecord(value)) return false;
-  if (value["ok"] === true) return "data" in value;
-  return value["ok"] === false && typeof value["error"] === "string";
+  return value["ok"] === true ? "data" in value : typeof value["error"] === "string";
 }
 
 async function request(url: string, kind: FetchKind): Promise<FetchResponse> {
   const message: FetchRequest = { type: "fetch", kind, url };
 
   try {
-    const reply: unknown = await browser.runtime.sendMessage(message);
+    const reply: unknown = await chrome.runtime.sendMessage(message);
     return isFetchResponse(reply) ? reply : { ok: false, error: "invalid-response" };
   } catch {
     // Thrown when the extension was reloaded or updated under a live page.

@@ -13,7 +13,7 @@ export default tseslint.config(
     },
   },
   {
-    files: ["src/shared/logger.ts"],
+    files: ["src/shared/util.ts"],
     rules: { "no-console": "off" },
   },
   {

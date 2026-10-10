@@ -3,12 +3,13 @@
  * in-memory LRU cache so repeated lookups do not hit the network.
  */
 
-import { logger } from "../shared/logger";
-import type { LyricsResult } from "../shared/types";
+import { logger } from "../shared/util";
 import { genius } from "./genius";
 import { letsSingIt } from "./letssingit";
-import type { LyricsProvider } from "./provider";
+import type { LyricsProvider, LyricsResult } from "./provider";
 import { songLyrics } from "./songlyrics";
+
+export type { LyricsResult } from "./provider";
 
 const PROVIDERS: readonly LyricsProvider[] = [genius, letsSingIt, songLyrics];
 const MIN_LYRICS_LENGTH = 15;
@@ -32,13 +33,19 @@ export function clearCache(): void {
   cache.clear();
 }
 
+export interface FindOptions {
+  readonly providers?: readonly LyricsProvider[];
+  /** Stops trying further providers once aborted; the result is then `null`. */
+  readonly signal?: AbortSignal;
+}
+
 /**
  * Returns the first usable result from the providers, or `null`.
  * Never rejects: a failing provider is skipped.
  */
 export async function findLyrics(
   query: string,
-  providers: readonly LyricsProvider[] = PROVIDERS,
+  { providers = PROVIDERS, signal }: FindOptions = {},
 ): Promise<LyricsResult | null> {
   const key = query.trim().toLowerCase();
   if (!key) return null;
@@ -50,6 +57,8 @@ export async function findLyrics(
   }
 
   for (const provider of providers) {
+    if (signal?.aborted) return null;
+
     try {
       const result = await provider.getLyrics(key);
       if (result && result.lyrics.trim().length >= MIN_LYRICS_LENGTH) {

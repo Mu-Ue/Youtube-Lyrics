@@ -1,6 +1,5 @@
-import type { LyricsResult } from "../shared/types";
 import { buildUrl, elementToText, fetchDocument, resolveUrl } from "./html";
-import type { LyricsProvider } from "./provider";
+import type { LyricsProvider, LyricsResult } from "./provider";
 
 const SEARCH_URL = "https://www.songlyrics.com/index.php";
 

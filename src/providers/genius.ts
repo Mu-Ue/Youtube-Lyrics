@@ -1,8 +1,7 @@
-import { isRecord } from "../shared/guards";
 import { fetchJson } from "../shared/messaging";
-import type { LyricsResult } from "../shared/types";
+import { isRecord } from "../shared/util";
 import { buildUrl, elementToText, fetchDocument } from "./html";
-import type { LyricsProvider } from "./provider";
+import type { LyricsProvider, LyricsResult } from "./provider";
 
 const SEARCH_ENDPOINT = "https://genius.com/api/search/song";
 const LYRICS_CONTAINER = '[data-lyrics-container="true"]';

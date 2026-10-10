@@ -1,37 +1,35 @@
 /**
- * Background service worker.
- *
- * Fetches lyrics pages on behalf of the content script, which cannot make
- * cross-origin requests itself. Only well-formed messages from this
- * extension's own YouTube content script are answered, and every target URL
- * is validated by the fetcher before a request is made.
+ * Background worker. Downloads lyrics pages for the content script, which
+ * cannot make cross-origin requests itself. Only well-formed messages from
+ * this extension's own YouTube content script are answered.
  */
 
-import browser, { type Runtime } from "webextension-polyfill";
-
-import { isFetchRequest, type FetchResponse } from "../shared/types";
-import { fetchResource } from "./fetcher";
+import { isFetchRequest, type FetchResponse } from "../shared/messaging";
+import { fetchResource } from "./fetch";
 
 const TRUSTED_ORIGIN = "https://www.youtube.com";
 
-const reject = (error: "bad-request" | "forbidden"): Promise<FetchResponse> =>
-  Promise.resolve({ ok: false, error });
-
-function isTrustedSender(sender: Runtime.MessageSender): boolean {
-  if (sender.id !== browser.runtime.id || !sender.url) return false;
-
-  try {
-    return new URL(sender.url).origin === TRUSTED_ORIGIN;
-  } catch {
-    return false;
-  }
+function isTrustedSender(sender: chrome.runtime.MessageSender): boolean {
+  return (
+    sender.id === chrome.runtime.id &&
+    sender.url !== undefined &&
+    URL.canParse(sender.url) &&
+    new URL(sender.url).origin === TRUSTED_ORIGIN
+  );
 }
 
-browser.runtime.onMessage.addListener(
-  (message: unknown, sender: Runtime.MessageSender): Promise<FetchResponse> => {
-    if (!isTrustedSender(sender)) return reject("forbidden");
-    if (!isFetchRequest(message)) return reject("bad-request");
-
-    return fetchResource(message.url, message.kind);
+// `sendResponse` plus `return true` is the async reply style both Chrome and
+// Firefox support; returning a promise from the listener is not portable.
+chrome.runtime.onMessage.addListener(
+  (message: unknown, sender, sendResponse: (response: FetchResponse) => void) => {
+    if (!isTrustedSender(sender)) {
+      sendResponse({ ok: false, error: "forbidden" });
+    } else if (!isFetchRequest(message)) {
+      sendResponse({ ok: false, error: "bad-request" });
+    } else {
+      void fetchResource(message.url, message.kind).then(sendResponse);
+      return true;
+    }
+    return false;
   },
 );

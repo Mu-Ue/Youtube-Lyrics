@@ -1,40 +1,44 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { FetchResponse } from "../../src/shared/types";
+import type { FetchResponse } from "../../src/shared/messaging";
 
 interface Sender {
   id?: string;
   url?: string;
 }
-type Listener = (message: unknown, sender: Sender) => Promise<FetchResponse>;
+type Listener = (
+  message: unknown,
+  sender: Sender,
+  sendResponse: (response: FetchResponse) => void,
+) => boolean;
 
 const mocks = vi.hoisted(() => ({
   listener: undefined as Listener | undefined,
   fetchResource: vi.fn(),
 }));
 
-vi.mock("webextension-polyfill", () => ({
-  default: {
-    runtime: {
-      id: "extension-id",
-      onMessage: {
-        addListener: (listener: Listener) => {
-          mocks.listener = listener;
-        },
+vi.stubGlobal("chrome", {
+  runtime: {
+    id: "extension-id",
+    onMessage: {
+      addListener: (listener: Listener) => {
+        mocks.listener = listener;
       },
     },
   },
-}));
-vi.mock("../../src/background/fetcher", () => ({ fetchResource: mocks.fetchResource }));
+});
+vi.mock("../../src/background/fetch", () => ({ fetchResource: mocks.fetchResource }));
 
 await import("../../src/background/index");
 
 const trusted: Sender = { id: "extension-id", url: "https://www.youtube.com/watch?v=abc" };
 const message = { type: "fetch", kind: "text", url: "https://genius.com/song" };
 
+/** Delivers a message and resolves with the reply, however it is sent. */
 function handle(msg: unknown, sender: Sender): Promise<FetchResponse> {
-  if (!mocks.listener) throw new Error("listener was not registered");
-  return mocks.listener(msg, sender);
+  const listener = mocks.listener;
+  if (!listener) throw new Error("listener was not registered");
+  return new Promise((resolve) => listener(msg, sender, resolve));
 }
 
 describe("background message handler", () => {
@@ -46,6 +50,12 @@ describe("background message handler", () => {
   it("forwards a valid request from the extension's YouTube content script", async () => {
     expect(await handle(message, trusted)).toEqual({ ok: true, data: "body" });
     expect(mocks.fetchResource).toHaveBeenCalledWith("https://genius.com/song", "text");
+  });
+
+  it("keeps the channel open only for asynchronous replies", () => {
+    const listener = mocks.listener;
+    expect(listener?.(message, trusted, () => undefined)).toBe(true);
+    expect(listener?.(message, {}, () => undefined)).toBe(false);
   });
 
   it.each([

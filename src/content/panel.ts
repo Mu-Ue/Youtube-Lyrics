@@ -3,7 +3,7 @@
  * it through the methods below and the handlers passed to the constructor.
  */
 
-import type { LyricsResult } from "../shared/types";
+import type { LyricsResult } from "../providers";
 
 const SVG_NAMESPACE = "http://www.w3.org/2000/svg";
 const REPOSITORY_URL = "https://github.com/Firefox0/Youtube-Lyrics";
@@ -143,11 +143,6 @@ export class LyricsPanel {
     secondary.prepend(this.sidebarHost);
 
     this.setPlacement(this.insideDescription);
-  }
-
-  destroy(): void {
-    this.removeHosts();
-    this.root.remove();
   }
 
   setOpen(open: boolean): void {
