@@ -8,7 +8,8 @@ const EDGE_SEPARATORS = /^[-–—·•○\s]+|[-–—·•○\s]+$/g;
 const ARTIST_SONG_SEPARATOR = /\s+[-–—]\s+/;
 const NOISE_PHRASES =
   /\b(?:official\s+(?:music\s+)?(?:video|audio|lyric\s+video)|(?:music|lyric)\s+video|lyrics?|hd|4k)\b/gi;
-const FEATURING = /\b(?:featuring|feat|ft)\b\.?\s*[,;]?\s*\S+/gi;
+// Guest artists run to the end of their fragment ("Artist ft. Guest Name - Song").
+const FEATURING = /(?:^|\s)(?:featuring|feat|ft)\b.*$/i;
 const AMPERSAND_OR_PIPE = /[&|]/g;
 const QUOTES = /['"‘’“”`]/g;
 const MULTI_SPACE = /\s{2,}/g;
