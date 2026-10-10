@@ -6,7 +6,6 @@
 import type { LyricsResult } from "../providers";
 
 const SVG_NAMESPACE = "http://www.w3.org/2000/svg";
-const REPOSITORY_URL = "https://github.com/Firefox0/Youtube-Lyrics";
 const BODY_ID = "yl-body";
 
 /** Material Design icon paths (Apache License 2.0). */
@@ -192,7 +191,7 @@ export class LyricsPanel {
 
   showMessage(text: string): void {
     this.spinner.hidden = true;
-    this.setSource("Report an issue", REPOSITORY_URL);
+    this.source.hidden = true;
     this.lyrics.textContent = "";
     this.status.textContent = text;
   }

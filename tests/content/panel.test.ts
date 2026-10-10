@@ -62,6 +62,7 @@ describe("LyricsPanel", () => {
     expect(query(".yl-status").getAttribute("role")).toBe("status");
     expect(query(".yl-lyrics").textContent).toBe("");
     expect(query(".yl-lyrics").hasAttribute("aria-live")).toBe(false);
+    expect(query<HTMLAnchorElement>(".yl-source").hidden).toBe(true);
   });
 
   it("exposes the search form as a landmark and links the toggle to the collapsible body", () => {
